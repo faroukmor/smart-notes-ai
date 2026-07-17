@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from database_operations import notes_database
-from ai_operations import chat_function,get_embedding
+from rag_engine import chat_function,get_embedding
 import sys, os, shutil
 import json
 
