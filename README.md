@@ -114,7 +114,7 @@ python main.py
 
 ## Main Window
 
-![Main Window](assets/main-window.png)
+![Main Window](assets/screenshots/main-window.png)
 
 ### AI Assistant
 
