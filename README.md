@@ -112,9 +112,9 @@ python main.py
 
 ## Screenshots
 
-### Main Window
+## Main Window
 
-(Add Screenshot Here)
+![Main Window](assets/main-window.png)
 
 ### AI Assistant
 
@@ -136,6 +136,5 @@ python main.py
 
 ## License
 
-MIT License# smart-notes-ai
-# smart-notes-ai
-# smart-notes-ai
+MIT License
+
