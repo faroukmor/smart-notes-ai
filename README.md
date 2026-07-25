@@ -114,13 +114,10 @@ python main.py
 
 ## Main Window
 
-|![Main Window](assets/screenshots/dark_screenshot.png) | ![Main Window](assets/screenshots/light_screenshot.png)|
+| dark mode | light mode |
+| :-: | :-: |
+| <img src="assets/screenshots/dark_screenshot.png"> | <img src="assets/screenshots/light_screenshot.png"> |
 
-### AI Assistant
-
-(Add Screenshot Here)
-
----
 
 ## Future Improvements
 
