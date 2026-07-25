@@ -1,7 +1,7 @@
 import sys 
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QTextEdit, QPushButton, QLabel, 
-                             QGroupBox, QLineEdit,QMessageBox) 
+                             QGroupBox, QLineEdit,QMessageBox, QColorDialog) 
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from database_operations import notes_database
@@ -91,6 +91,7 @@ class smart_note(QMainWindow):
         self.output_textEdit = QTextEdit()
         self.output_textEdit.setText("Welcome to Smart Notes Manager! Start by adding a note.")
         self.output_textEdit.setObjectName("output") 
+        
 
         self.initUI()
         

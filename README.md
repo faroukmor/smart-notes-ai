@@ -124,12 +124,9 @@ python main.py
 
 ## Future Improvements
 
-- Vector Database (FAISS)
 - Dark Mode
 - Export Notes
 - PDF Support
-- Markdown Support
-- Multi-threaded Embedding Generation
 - Better UI Animations
 
 ---
