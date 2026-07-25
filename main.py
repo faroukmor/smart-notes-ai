@@ -15,7 +15,7 @@ def resource_path(relative_path):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.abspath(relative_path)
 
-# ---------- إعداد قاعدة البيانات ----------
+# إعداد قاعدة البيانات 
 DB_NAME = "notes_manager.db"
 db_src = resource_path(DB_NAME)
 
@@ -29,7 +29,6 @@ if getattr(sys, 'frozen', False):
         shutil.copyfile(db_src, db_dst)
 else:
     db_dst = db_src  # أثناء التطوير على البايثون
-
 
 
 
@@ -53,10 +52,10 @@ class smart_note(QMainWindow):
         super().__init__()
         self.note_db = notes_database(db_dst)
         self.setWindowTitle("SMART NOTES MANAGER")
-        self.setGeometry(1430,35,500,990)
+        self.setGeometry(1270,35,500,990)
         
-        # في بداية __init__ بعد setGeometry
-        icon_path = resource_path("myicon.jfif")  # أيقونتك الجديدة
+        
+        icon_path = resource_path("assets/myicon.jfif") 
         self.setWindowIcon(QIcon(icon_path))
 
         
@@ -96,13 +95,16 @@ class smart_note(QMainWindow):
         self.initUI()
         
     
-    def initUI(self):
+    def initUI(self): 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
         title_bar_layout = QHBoxLayout()
         title_bar_layout.addWidget(self.label_title)
-        
+        self.theme_btn = QPushButton("Dark")
+        title_bar_layout.addWidget(self.theme_btn)
+
+
         searching_layout = QHBoxLayout()
         searching_layout.addWidget(self.search_input)
         searching_layout.addWidget(self.search_button)
@@ -129,15 +131,16 @@ class smart_note(QMainWindow):
         top_buttons_hbox.addWidget(self.add_button)
         top_buttons_hbox.addWidget(self.update_button)
         top_buttons_hbox.addWidget(self.delete_button)
-        top_buttons_hbox.addStretch(1) # Push buttons to center
+        top_buttons_hbox.addStretch(1) 
 
         # Layout for Show All Notes button (second row)
         show_all_button_hbox = QHBoxLayout()
-        show_all_button_hbox.addStretch(1) # Push button to center
+        show_all_button_hbox.addStretch(1) 
         show_all_button_hbox.addWidget(self.showAll_button)
-        show_all_button_hbox.addStretch(1) # Push button to center
+        show_all_button_hbox.addStretch(1) 
+
         
-        # New: A QVBoxLayout to stack the two HBoxes of buttons
+        # A QVBoxLayout to stack the two HBoxes of buttons
         buttons_vbox = QVBoxLayout()
         buttons_vbox.addLayout(top_buttons_hbox)
         buttons_vbox.addLayout(show_all_button_hbox)
@@ -158,70 +161,140 @@ class smart_note(QMainWindow):
         vbox.addWidget(output_group_box, 6) 
         central_widget.setLayout(vbox)
 
-        self.setStyleSheet("""
-            QWidget {
-                background-color: hsl(233, 50%, 95%);
-                font-family: 'Segoe UI' , Arial;
-                color: #333;
-            }
+        
+        self.LIGHT = {
+            'bg_main': 'hsl(233, 50%, 95%)',
+            'bg_card': 'white',
+            'bg_input': 'hsl(233, 50%, 95%)',
+            'bg_output': '#f8f8f8',
+            'bg_scrollbar': '#e0e0e0',
+            'bg_title': 'hsl(233, 50%, 95%)',
+            'primary': 'hsl(233, 50%, 40%)',
+            'primary_hover': 'hsl(233, 50%, 55%)',
+            'primary_pressed': 'hsl(233, 50%, 30%)',
+            'primary_light': 'hsl(233, 50%, 60%)',
+            'primary_lighter': 'hsl(233, 50%, 50%)',
+            'primary_lightest': 'hsl(233, 50%, 65%)',
+            'text_main': '#333',
+            'text_secondary': '#444',
+            'text_output': '#222',
+            'text_muted': '#666',
+            'text_faint': '#888',
+            'text_inverse': 'white',
+            'border_main': '#d0d0d0',
+            'border_input': '#a9a9a9',
+            'border_output': '#ddd',
+            'border_html': '#ccc',
+            'border_card': '#eee',
+            'shadow': 'rgba(0,0,0,0.05)',
+        }
 
-            QLabel#appTitleLabel {
-                color: hsl(233, 50%, 40%);
+        self.DARK = {
+            'bg_main': 'hsl(233, 20%, 12%)',
+            'bg_card': 'hsl(233, 15%, 18%)',
+            'bg_input': 'hsl(233, 15%, 22%)',
+            'bg_output': 'hsl(233, 15%, 15%)',
+            'bg_scrollbar': 'hsl(233, 15%, 25%)',
+            'bg_title': 'hsl(233, 20%, 12%)',
+            'primary': 'hsl(220, 80%, 65%)',
+            'primary_hover': 'hsl(220, 80%, 75%)',
+            'primary_pressed': 'hsl(220, 80%, 55%)',
+            'primary_light': 'hsl(220, 60%, 50%)',
+            'primary_lighter': 'hsl(220, 60%, 45%)',
+            'primary_lightest': 'hsl(220, 60%, 55%)',
+            'text_main': '#e0e0e0',
+            'text_secondary': '#b0b0b0',
+            'text_output': '#d0d0d0',
+            'text_muted': '#999',
+            'text_faint': '#777',
+            'text_inverse': 'hsl(233, 20%, 12%)',
+            'border_main': '#444',
+            'border_input': '#555',
+            'border_output': '#444',
+            'border_html': '#555',
+            'border_card': '#3a3a3a',
+            'shadow': 'rgba(0,0,0,0.3)',
+        }
+        
+        self.current_theme = self.LIGHT
+
+        self.setStyleSheet(self.build_style(self.current_theme))
+        
+        self.add_button.clicked.connect(self.add_note)
+        self.showAll_button.clicked.connect(self.show_all_note)
+        self.delete_button.clicked.connect(self.delete_note)
+        self.update_button.clicked.connect(self.update_note)
+        self.search_button.clicked.connect(self.search_note)
+        self.ai_button.clicked.connect(self.ai_note)
+        self.theme_btn.clicked.connect(self.toggle_theme)
+
+
+
+    def build_style(self, theme):
+        return f"""
+            QWidget {{
+                background-color: {theme['bg_main']};
+                font-family: 'Segoe UI' , Arial;
+                color: {theme['text_main']};
+            }}
+
+            QLabel#appTitleLabel {{
+                color: {theme['primary']};
                 font-size: 40px;
                 font-weight: bold;
                 padding: 10px 0;
                 margin-bottom: 10px;
                 qproperty-alignment: AlignCenter;
-            }
+            }}
 
-            QLabel {
+            QLabel {{
                 font-size: 23px;
-                color: #444;
+                color: {theme['text_secondary']};
                 font-weight: bold;
                 padding: 2px;
-            }
+            }}
 
-            QGroupBox {
+            QGroupBox {{
                 font-size: 25px;
                 font-weight: bold;
-                color: hsl(233, 50%, 40%);
-                border: 1px solid #d0d0d0;
+                color: {theme['primary']};
+                border: 1px solid {theme['border_main']};
                 border-radius: 8px;
                 margin-top: 15px;
                 padding-top: 25px;
-                background-color: white;
-            }
-            QGroupBox::title {
+                background-color: {theme['bg_card']};
+            }}
+            QGroupBox::title {{
                 subcontrol-origin: margin;
                 subcontrol-position: top left;
                 padding: 0 10px;
                 font-weight: bold;
-                background-color: hsl(233, 50%, 95%);
+                background-color: {theme['bg_title']};
                 border-radius: 5px;
-            }
+            }}
 
-            QLineEdit, QTextEdit {
+            QLineEdit, QTextEdit {{
                 font-size: 20px;
                 padding: 8px;
-                border: 1px solid #a9a9a9;
+                border: 1px solid {theme['border_input']};
                 border-radius: 5px;
-                background-color: hsl(233, 50%, 95%);
-                selection-background-color: hsl(233, 50%, 60%);
-                selection-color: white;
-            }
-            QLineEdit#search_input{
-                           background-color: white;
-                           }
-            QLineEdit#ai_input{
-                           background-color: white;
-                           }
-            QTextEdit {
+                background-color: {theme['bg_input']};
+                selection-background-color: {theme['primary_light']};
+                selection-color: {theme['text_inverse']};
+            }}
+            QLineEdit#search_input{{
+                           background-color: {theme['bg_card']};
+                           }}
+            QLineEdit#ai_input{{
+                           background-color: {theme['bg_card']};
+                           }}
+            QTextEdit {{
                 min-height: 150px;
-            }
+            }}
 
-            QPushButton {
-                background-color: hsl(233, 50%, 40%);
-                color: white;
+            QPushButton {{
+                background-color: {theme['primary']};
+                color: {theme['text_inverse']};
                            font-weight: bold;
                 font-size: 20px;
                 padding: 10px 15px;
@@ -229,50 +302,55 @@ class smart_note(QMainWindow):
                 border-radius: 5px;
                 margin: 5px;
                 min-width: 90px;
-            }
-            QPushButton:hover {
-                background-color: hsl(233, 50%, 55%);
-            }
-            QPushButton:pressed {
-                background-color: hsl(233, 50%, 30%);
+            }}
+            QPushButton:hover{{
+                background-color: {theme['primary_hover']};
+            }}
+            QPushButton:pressed {{
+                background-color: {theme['primary_pressed']};
                 padding-left: 17px;
                 padding-top: 12px;
-            }
+            }}
 
-            QTextEdit#output {
+            QTextEdit#output {{
                 font-size: 25px;
-                background-color: #f8f8f8;
-                border: 1px solid #ddd;
+                background-color: {theme['bg_output']};
+                border: 1px solid {theme['border_output']};
                 border-radius: 5px;
                 padding: 10px;
                 min-height: 180px;
-                color: #222;
-            }
-            QScrollBar:vertical {
+                color: {theme['text_output']};
+            }}
+            QScrollBar:vertical {{
                 border: none;            
-                background: #e0e0e0;     
+                background: {theme['bg_scrollbar']};     
                 width: 8px;               
                 margin: 0px 0px 0px 0px;  
                 border-radius: 4px; 
                      
-            }
-            QScrollBar::handle:vertical {
-                background: hsl(233, 50%, 50%);
+            }}
+            QScrollBar::handle:vertical {{
+                background: {theme['primary_lighter']};
                 border-radius: 4px;            
                 min-height: 25px; 
-            }
-            QScrollBar::handle:vertical:hover {
-                background: hsl(233, 50%, 65%); 
-           }
+            }}
+            QScrollBar::handle:vertical:hover {{
+                background: {theme['primary_lightest']}; 
+           }}
             
-        """)
-        self.add_button.clicked.connect(self.add_note)
-        self.showAll_button.clicked.connect(self.show_all_note)
-        self.delete_button.clicked.connect(self.delete_note)
-        self.update_button.clicked.connect(self.update_note)
-        self.search_button.clicked.connect(self.search_note)
-        self.ai_button.clicked.connect(self.ai_note)
+        """
 
+    def toggle_theme(self):
+        if self.current_theme == self.LIGHT:
+            self.current_theme = self.DARK
+            self.theme_btn.setText("Light")
+        else:
+            self.current_theme = self.LIGHT
+            self.theme_btn.setText("Dark")
+
+        self.setStyleSheet(self.build_style(self.current_theme))
+        self.output_textEdit.setText("")
+    
     def add_note(self):
         title = self.title_input.text()
         content = self.content_editor.toPlainText()
@@ -332,25 +410,26 @@ class smart_note(QMainWindow):
     def show_all_note(self):
         try:
             returned_notes = self.note_db.show_notes()
+            t = self.current_theme
             
-            html_message = """<body style= 'background-color: #fff'>
-            <h1>All Notes:</h1><hr style='border: 1px solid #ccc;'>""" 
+            html_message = f"""<body style='background-color: {t['bg_card']}; color: {t['text_main']};'>
+            <h1 style='color: {t['primary']};'>All Notes:</h1><hr style='border: 1px solid {t['border_html']};'>""" 
             
             if not returned_notes: 
-                html_message += "<p>No notes available. Add your first note!</p>"
+                html_message += f"<p style='color: {t['text_muted']};'>No notes available. Add your first note!</p>"
             else:
                 for note in returned_notes:
                     
                     title, content, tags, creation_date = note[0], note[1], note[2], note[3]
                     
                     
-                    html_message += f"<div style='border: 1px solid #eee; padding: 10px; margin-bottom: 10px; border-radius: 8px; background-color: hsl(233, 50%, 95%); box-shadow: 0 2px 4px rgba(0,0,0,0.05);'>"
-                    html_message += f"<h3><span style='color: hsl(233, 50%, 40%);'>{title}</span></h3>" 
-                    html_message += f"<p>{content}</p>"
+                    html_message += f"<div style='border: 1px solid {t['border_card']}; padding: 10px; margin-bottom: 10px; border-radius: 8px; background-color: {t['bg_main']}; box-shadow: 0 2px 4px {t['shadow']};'>"
+                    html_message += f"<h3><span style='color: {t['primary']};'>{title}</span></h3>" 
+                    html_message += f"<p style='color: {t['text_main']};'>{content}</p>"
                     
-                    html_message += f"<p><small><b>Tags:</b> <i style='color: #666;'>{tags if tags else 'No tags'}</i></small></p>"
+                    html_message += f"<p><small><b style='color: {t['text_secondary']}'>Tags:</b> <i style='color: {t['text_muted']};'>{tags if tags else 'No tags'}</i></small></p>"
                     
-                    html_message += f"<p style='text-align: right; color: #888;'><small>Created: {creation_date}</small></p>"
+                    html_message += f"<p style='text-align: right; color: {t['text_faint']};'><small>Created: {creation_date}</small></p>"
                     html_message += "</div>" 
             self.output_textEdit.setHtml(html_message)
         except IndexError:
@@ -362,25 +441,26 @@ class smart_note(QMainWindow):
             self.output_textEdit.setText("You Didn't Write Anything To Search.") 
         else:
             returned_notes = self.note_db.search_note(title_searched)
+            t = self.current_theme
             
            
-            html_message = f"<h2>Search Results for '{title_searched}':</h2><hr style='border: 1px solid #ccc;'>"
+            html_message = f"<h2 style='color: {t['primary']};'>Search Results for '{title_searched}':</h2><hr style='border: 1px solid {t['border_html']}';>"
             
             if not returned_notes:
-                html_message += f"<p>No notes found matching '{title_searched}'.</p>"
+                html_message += f"<p style='color: {t['text_muted']}'>No notes found matching '{title_searched}'.</p>"
             else:
                 for note in returned_notes:
                    
                     note_id, title, content, creation_date, tags = note[0], note[1], note[2], note[3], note[4]
 
                    
-                    html_message += f"<div style='border: 1px solid #eee; padding: 10px; margin-bottom: 10px; border-radius: 8px; background-color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05);'>"
-                    html_message += f"<h3><span style='color: hsl(233, 50%, 40%);'>ID: {note_id}</span> - {title}</h3>" 
-                    html_message += f"<p>{content}</p>" 
+                    html_message += f"<div style='border: 1px solid {t['border_card']}; padding: 10px; margin-bottom: 10px; border-radius: 8px; background-color: {t['bg_card']}; box-shadow: 0 2px 4px {t['shadow']};'>"
+                    html_message += f"<h3><span style='color: {t['primary']}';'>ID: {note_id}</span> - <span style='color: {t['text_main']};'>{title}</span></h3>" 
+                    html_message += f"<p style='color: {t['text_main']};'>{content}</p>" 
                    
-                    html_message += f"<p><small><b>Tags:</b> <i style='color: #666;'>{tags if tags else 'No tags'}</i></small></p>"
+                    html_message += f"<p><small><b style='color: {t['text_secondary']}'>Tags:</b> <i style='color: {t['text_muted']};'>{tags if tags else 'No tags'}</i></small></p>"
                     
-                    html_message += f"<p style='text-align: right; color: hsl(233, 50%, 40%);'><small>Created: {creation_date}</small></p>"
+                    html_message += f"<p style='text-align: right; color: {t['primary']}';'><small>Created: {creation_date}</small></p>"
                     html_message += "</div>"
             self.output_textEdit.setHtml(html_message)
         self.search_input.clear()
@@ -410,14 +490,14 @@ class smart_note(QMainWindow):
             self.thread.start()
                         
     def display_ai_answer(self,answer,user_input):
-        
+        t = self.current_theme
 
-        html_message = f"<h2>Results for '{user_input}':</h2><hr style='border: 1px solid #ccc;'>"
+        html_message = f"<h2 style='color: {t['primary']}';'>Results for '{user_input}':</h2><hr style='border: 1px solid {t['border_html']}';'>"
             
         if not answer:
-            html_message += f"<p>No notes found matching '{user_input}'.</p>"
+            html_message += f"<p style='color: {t['text_muted']}'>No notes found matching '{user_input}'.</p>"
         else:
-            html_message += f"<p style='font-size: 25px;color: hsl(233, 50%, 40%);'>{answer}</p>" 
+            html_message += f"<p style='font-size: 25px; color: {t['primary']}';'>{answer}</p>" 
         self.output_textEdit.setHtml(html_message)
         self.ai_button.setEnabled(True)
         self.ai_input.clear()
