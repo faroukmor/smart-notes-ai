@@ -121,7 +121,7 @@ python main.py
 
 ## Future Improvements
 
-- Dark Mode
+✅ Dark Mode
 - Export Notes
 - PDF Support
 - Better UI Animations
