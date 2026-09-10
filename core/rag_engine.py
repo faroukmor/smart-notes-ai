@@ -15,6 +15,8 @@ from core.config import (
     REPEAT_PENALTY,
 )
 
+NOT_FOUND_REPLY = "The requested information was not found in your notes."
+
 _ollama_client = ollama.Client(host=OLLAMA_HOST)
 
 
@@ -90,17 +92,8 @@ def retrieve_from_db(conn, user_input):
     return top_chunks
 
 
-NOT_FOUND_REPLY = "The requested information was not found in your notes."
-
-
 def chat_function(msg):
-    """Answer strictly from the user's notes.
-
-    Anti-hallucination by construction: instead of letting the model
-    generate an answer (small models paraphrase/invent), we ask it only
-    to CLASSIFY which note answers the question. The returned text is
-    then the stored note itself, so nothing can be invented.
-    """
+    """Classic RAG: retrieve sources, let the AI answer ONLY from them."""
     conn = sqlite3.connect(DB_PATH)
     try:
         top_chunks = retrieve_from_db(conn, msg)
@@ -110,23 +103,21 @@ def chat_function(msg):
     if not top_chunks:
         return NOT_FOUND_REPLY
 
-    notes_section = ""
-    for i, (_score, text) in enumerate(top_chunks, start=1):
-        notes_section += f"[{i}] {text}\n\n"
+    # The embedding search results are the ONLY allowed sources.
+    sources = "\n\n".join([chunk[1] for chunk in top_chunks])
 
-    system_prompt = f"""You are a strict classifier. The user asks a question
-and you have numbered notes below.
-
-Task: reply with ONLY the number (e.g. 1, 2 or 3) of the single note that
-actually contains the answer to the question.
+    system_prompt = f"""You are an assistant. These sources below are the ONLY
+thing you are allowed to answer from.
 
 Rules:
-- Reply with the number only, nothing else.
-- If NO note contains the answer, reply with exactly: NONE
-- Never guess. If unsure, reply NONE.
+- Answer the user's question in your own words, based strictly on the sources.
+- Do NOT use any knowledge outside the sources.
+- If the sources do not contain the answer, reply with exactly:
+  The requested information was not found in your notes.
 
 ======================
-{notes_section}======================"""
+{sources}
+======================"""
 
     messages = [
         {"role": "system", "content": system_prompt},
@@ -138,17 +129,9 @@ Rules:
         messages=messages,
         options={
             "temperature": TEMPERATURE,
-            "num_predict": 16,
+            "num_predict": NUM_PREDICT,
+            "repeat_penalty": REPEAT_PENALTY,
         },
     )
 
-    reply = response["message"]["content"].strip()
-
-    # Parse the classifier's choice deterministically.
-    digits = "".join(ch for ch in reply if ch.isdigit())
-    if digits:
-        index = int(digits) - 1
-        if 0 <= index < len(top_chunks):
-            return top_chunks[index][1]
-
-    return NOT_FOUND_REPLY
+    return response["message"]["content"].strip()
