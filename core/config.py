@@ -20,9 +20,10 @@ EMBED_MODEL = "nomic-embed-text"
 LLM_MODEL = "qwen2.5:3b"
 
 # --- RAG retrieval -------------------------------------------------------
-# The threshold is intentionally LOW (high recall): irrelevant matches are
-# filtered later by the deterministic quote check in chat_function, not here.
-SIMILARITY_THRESHOLD = 0.35
+# 0.6 works well for ENGLISH questions (relevant > 0.8, irrelevant < 0.5).
+# Note: ARABIC questions score 0.7+ against any Arabic note (nomic-embed-text
+# is English-centric), so Arabic out-of-scope questions may still pass.
+SIMILARITY_THRESHOLD = 0.6
 TOP_K = 3
 
 # --- LLM generation ------------------------------------------------------

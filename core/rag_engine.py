@@ -20,6 +20,18 @@ NOT_FOUND_REPLY = "The requested information was not found in your notes."
 _ollama_client = ollama.Client(host=OLLAMA_HOST)
 
 
+def get_embedding(text):
+    try:
+        result = _ollama_client.embeddings(
+            model=EMBED_MODEL,
+            prompt=text,
+        )
+        return np.array(result["embedding"])
+    except Exception as e:
+        print(f"(get_embedding) Error: {e}")
+        return None
+
+
 def content_embeding(conn):
     cur = conn.cursor()
     cur.execute("Select id,content from notes where embedding is NULL")
@@ -66,16 +78,6 @@ def get_top_chunks(user_input, knowledge_base):
     return results[:TOP_K]
 
 
-def get_embedding(text):
-    try:
-        result = _ollama_client.embeddings(
-            model=EMBED_MODEL,
-            prompt=text,
-        )
-        return np.array(result["embedding"])
-    except Exception as e:
-        print(f"(get_embedding) Error: {e}")
-        return None
 
 
 def retrieve_from_db(conn, user_input):
