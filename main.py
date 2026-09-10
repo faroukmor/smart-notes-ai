@@ -1,63 +1,23 @@
-import sys 
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QTextEdit, QPushButton, QLabel, 
-                             QGroupBox, QLineEdit,QMessageBox, QColorDialog) 
+                             QGroupBox, QLineEdit,QMessageBox) 
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import QObject, QThread, pyqtSignal
-from database_operations import notes_database
-from rag_engine import chat_function,get_embedding
-import sys, os, shutil
-import json
+from core.smartnote import smart_note, resource_path
+import sys
 
-
-def resource_path(relative_path):
-    if hasattr(sys, '_MEIPASS'):
-        return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.abspath(relative_path)
-
-# إعداد قاعدة البيانات 
-DB_NAME = "notes_manager.db"
-db_src = resource_path(DB_NAME)
-
-if getattr(sys, 'frozen', False):
-    # المجلد الذي ستعمل فيه القاعدة بعد التحويل
-    appdata_dir = os.path.join(os.environ['APPDATA'], "Note_manager")
-    os.makedirs(appdata_dir, exist_ok=True)
-    db_dst = os.path.join(appdata_dir, DB_NAME)
-    # نسخ القاعدة أول مرة فقط
-    if not os.path.exists(db_dst):
-        shutil.copyfile(db_src, db_dst)
-else:
-    db_dst = db_src  # أثناء التطوير على البايثون
-
-
-
-class AIWorker(QObject):
-
-    finished = pyqtSignal(str,str)   
-
-    def __init__(self, user_input):
-        super().__init__()
-        self.user_input = user_input
-
-    def run(self):
-        answer = chat_function(self.user_input)
-        self.finished.emit(answer,self.user_input)
-
-
-
-
-class smart_note(QMainWindow):
+class Main_Window(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.note_db = notes_database(db_dst)
+        self.smart_note = smart_note()
+        self.smart_note.ai_answer_ready.connect(self.display_ai_answer)
+        self.smart_note.ai_answer_failed.connect(self.display_ai_failed)
+
         self.setWindowTitle("SMART NOTES MANAGER")
         self.setGeometry(1270,35,500,990)
         
         
         icon_path = resource_path("assets/myicon.jfif") 
         self.setWindowIcon(QIcon(icon_path))
-
         
         self.label_title = QLabel("SMART NOTES MANAGER")
         self.label_title.setObjectName("appTitleLabel")
@@ -219,16 +179,110 @@ class smart_note(QMainWindow):
         self.current_theme = self.LIGHT
 
         self.setStyleSheet(self.build_style(self.current_theme))
+
         
         self.add_button.clicked.connect(self.add_note)
-        self.showAll_button.clicked.connect(self.show_all_note)
+        self.showAll_button.clicked.connect(self.show_all_notes)
         self.delete_button.clicked.connect(self.delete_note)
         self.update_button.clicked.connect(self.update_note)
         self.search_button.clicked.connect(self.search_note)
         self.ai_button.clicked.connect(self.ai_note)
         self.theme_btn.clicked.connect(self.toggle_theme)
 
+    def add_note(self):
+        title = self.title_input.text()
+        content = self.content_editor.toPlainText()
+        tags = self.tags_input.text()
+        if title == "":
+            self.output_textEdit.setText("Empty Title!")
+        elif content == "":
+            self.output_textEdit.setText("Empty Content!")
+        else:
+            returned_text = self.smart_note.add_note(title,content,tags) 
+            self.output_textEdit.setText(returned_text)  
+        self.title_input.clear()
+        self.content_editor.clear()
+        self.tags_input.clear()  
 
+
+    def show_all_notes(self):
+        returned_text = self.smart_note.show_all_notes(self.current_theme)
+        if returned_text == "IndexError! propably(check the database)":
+            self.output_textEdit.setText(returned_text)
+        else:
+            self.output_textEdit.setHtml(returned_text)
+
+    
+    def delete_note(self):
+        title = self.title_input.text()
+        if title == "":
+            self.output_textEdit.setText("Empty Title!")
+        else:    
+            reply = QMessageBox.question(self, 'Confirm Deletion', 
+                             "Are you sure you want to delete this note?",
+                             QMessageBox.Yes | QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                returned_text = self.smart_note.delete_note(title)
+                self.output_textEdit.setText(returned_text)
+            else:
+                self.output_textEdit.setText("Deletion cancelled.")
+        self.title_input.clear()
+        self.content_editor.clear()
+        self.tags_input.clear()
+
+    def update_note(self):
+        title = self.title_input.text()
+        new_content = self.content_editor.toPlainText()
+        if title == "":
+            self.output_textEdit.setText("Empty Title!")
+        elif new_content == "":
+            self.output_textEdit.setText("Empty Content!")
+        else:
+            returned_text = self.smart_note.update_note(title, new_content)
+            self.output_textEdit.setText(f"{returned_text}")
+        self.title_input.clear()
+        self.content_editor.clear()
+        self.tags_input.clear()
+             
+    def search_note(self):
+        title_searched = self.search_input.text()
+        if title_searched == "":
+            self.output_textEdit.setText("You Didn't Write Anything To Search.") 
+        else:
+            returned_text = self.smart_note.search_note(title_searched,self.current_theme)
+            self.output_textEdit.setHtml(returned_text)
+        self.search_input.clear()
+   
+    def ai_note(self):
+        user_input = self.ai_input.text()
+        if user_input == "":
+            self.output_textEdit.setText("You Didn't Write Anything To ask.") 
+        else:
+            self.ai_button.setEnabled(False)
+            self.output_textEdit.setText("Wait for AI respond...")
+            self.last_question = user_input
+            self.smart_note.ai_note(
+                            user_input,
+                            self.current_theme
+                        )
+
+    def display_ai_answer(self, html_message):
+        self.output_textEdit.setHtml(html_message)
+
+        self.ai_button.setEnabled(True)
+        self.ai_input.clear()
+
+
+    def display_ai_failed(self, html_message):
+        self.output_textEdit.setHtml(html_message)
+
+        self.ai_button.setEnabled(True)
+
+
+    def closeEvent(self, event):
+        self.smart_note.save_changes()
+        self.smart_note.close_connection()
+        event.accept()
 
     def build_style(self, theme):
         return f"""
@@ -350,173 +404,11 @@ class smart_note(QMainWindow):
 
         self.setStyleSheet(self.build_style(self.current_theme))
         self.output_textEdit.setText("")
-    
-    def add_note(self):
-        title = self.title_input.text()
-        content = self.content_editor.toPlainText()
-        tags = self.tags_input.text()
-        if title == "":
-            self.output_textEdit.setText("Empty Title!")
-        elif content == "":
-            self.output_textEdit.setText("Empty Content!")
-        elif tags == "":
-            self.output_textEdit.setText("Empty Tag!")
-        else:
-            embedding = get_embedding(content)
-            embedding = json.dumps(embedding.tolist())
-            returned_text = self.note_db.Add_note(title, content, tags, embedding)
-            
-            self.output_textEdit.setText(returned_text)
-        self.title_input.clear()
-        self.content_editor.clear()
-        self.tags_input.clear()
 
-    def update_note(self):
-        title = self.title_input.text()
-        new_content = self.content_editor.toPlainText()
-        if title == "":
-            self.output_textEdit.setText("Empty Title!")
-        elif new_content == "":
-            self.output_textEdit.setText("Empty Content!")
-        else:
-            new_embedding = get_embedding(new_content)
-            returned_text = self.note_db.Update_note(title,new_content,new_embedding)
-            self.output_textEdit.setText(f"{returned_text}")
-        self.title_input.clear()
-        self.content_editor.clear()
-        self.tags_input.clear()
-
-    def delete_note(self):
-        title = self.title_input.text()
-        if title == "":
-            self.output_textEdit.setText("Empty Title!")
-        else:    
-            
-            reply = QMessageBox.question(self, 'Confirm Deletion', 
-                             "Are you sure you want to delete this note?",
-                             QMessageBox.Yes | QMessageBox.No)
-            if reply == QMessageBox.Yes:
-            
-                returned_text = self.note_db.Delete_data_note(title)
-                self.output_textEdit.setText(returned_text)
-            else:
-                self.output_textEdit.setText("Deletion cancelled.")
-            
-
-        self.title_input.clear()
-        self.content_editor.clear()
-        self.tags_input.clear()
-    
-    def show_all_note(self):
-        try:
-            returned_notes = self.note_db.show_notes()
-            t = self.current_theme
-            
-            html_message = f"""<body style='background-color: {t['bg_card']}; color: {t['text_main']};'>
-            <h1 style='color: {t['primary']};'>All Notes:</h1><hr style='border: 1px solid {t['border_html']};'>""" 
-            
-            if not returned_notes: 
-                html_message += f"<p style='color: {t['text_muted']};'>No notes available. Add your first note!</p>"
-            else:
-                for note in returned_notes:
-                    
-                    title, content, tags, creation_date = note[0], note[1], note[2], note[3]
-                    
-                    
-                    html_message += f"<div style='border: 1px solid {t['border_card']}; padding: 10px; margin-bottom: 10px; border-radius: 8px; background-color: {t['bg_main']}; box-shadow: 0 2px 4px {t['shadow']};'>"
-                    html_message += f"<h3><span style='color: {t['primary']};'>{title}</span></h3>" 
-                    html_message += f"<p style='color: {t['text_main']};'>{content}</p>"
-                    
-                    html_message += f"<p><small><b style='color: {t['text_secondary']}'>Tags:</b> <i style='color: {t['text_muted']};'>{tags if tags else 'No tags'}</i></small></p>"
-                    
-                    html_message += f"<p style='text-align: right; color: {t['text_faint']};'><small>Created: {creation_date}</small></p>"
-                    html_message += "</div>" 
-            self.output_textEdit.setHtml(html_message)
-        except IndexError:
-            self.output_textEdit.setText("IndexError! propably(check the database)")
-        
-    def search_note(self):
-        title_searched = self.search_input.text()
-        if title_searched == "":
-            self.output_textEdit.setText("You Didn't Write Anything To Search.") 
-        else:
-            returned_notes = self.note_db.search_note(title_searched)
-            t = self.current_theme
-            
-           
-            html_message = f"<h2 style='color: {t['primary']};'>Search Results for '{title_searched}':</h2><hr style='border: 1px solid {t['border_html']}';>"
-            
-            if not returned_notes:
-                html_message += f"<p style='color: {t['text_muted']}'>No notes found matching '{title_searched}'.</p>"
-            else:
-                for note in returned_notes:
-                   
-                    note_id, title, content, creation_date, tags = note[0], note[1], note[2], note[3], note[4]
-
-                   
-                    html_message += f"<div style='border: 1px solid {t['border_card']}; padding: 10px; margin-bottom: 10px; border-radius: 8px; background-color: {t['bg_card']}; box-shadow: 0 2px 4px {t['shadow']};'>"
-                    html_message += f"<h3><span style='color: {t['primary']}';'>ID: {note_id}</span> - <span style='color: {t['text_main']};'>{title}</span></h3>" 
-                    html_message += f"<p style='color: {t['text_main']};'>{content}</p>" 
-                   
-                    html_message += f"<p><small><b style='color: {t['text_secondary']}'>Tags:</b> <i style='color: {t['text_muted']};'>{tags if tags else 'No tags'}</i></small></p>"
-                    
-                    html_message += f"<p style='text-align: right; color: {t['primary']}';'><small>Created: {creation_date}</small></p>"
-                    html_message += "</div>"
-            self.output_textEdit.setHtml(html_message)
-        self.search_input.clear()
-
-    def ai_note(self):
-        user_input = self.ai_input.text()
-        if user_input == "":
-            self.output_textEdit.setText("You Didn't Write Anything To ask.") 
-        else:
-            self.ai_button.setEnabled(False)
-            self.output_textEdit.setText("Wait for AI respond...")
-
-            self.last_question = user_input
-            self.thread = QThread()
-            self.worker = AIWorker(user_input)
-
-            self.worker.moveToThread(self.thread)
-
-            self.thread.started.connect(self.worker.run)
-
-            self.worker.finished.connect(self.display_ai_answer)
-
-            self.worker.finished.connect(self.thread.quit)
-            self.worker.finished.connect(self.worker.deleteLater)
-            self.thread.finished.connect(self.thread.deleteLater)
-
-            self.thread.start()
-                        
-    def display_ai_answer(self,answer,user_input):
-        t = self.current_theme
-
-        html_message = f"<h2 style='color: {t['primary']}';'>Results for '{user_input}':</h2><hr style='border: 1px solid {t['border_html']}';'>"
-            
-        if not answer:
-            html_message += f"<p style='color: {t['text_muted']}'>No notes found matching '{user_input}'.</p>"
-        else:
-            html_message += f"<p style='font-size: 25px; color: {t['primary']}';'>{answer}</p>" 
-        self.output_textEdit.setHtml(html_message)
-        self.ai_button.setEnabled(True)
-        self.ai_input.clear()
-
-    def save_changes(self):
-        self.note_db.save_changes()
-    def close_connection(self):
-        self.note_db.close_connection()
-
-    def closeEvent(self, event):
-        self.note_db.save_changes()      
-        self.note_db.close_connection() 
-        event.accept()
-   
-
-    
+     
 def main():
     app = QApplication(sys.argv)
-    window = smart_note()
+    window = Main_Window()
     window.show()
     sys.exit(app.exec_())
 
