@@ -17,10 +17,12 @@ ASSETS_DIR = os.path.join(
 # --- Ollama --------------------------------------------------------------
 OLLAMA_HOST = "http://localhost:11434"
 EMBED_MODEL = "nomic-embed-text"
-LLM_MODEL = "qwen2.5:1.5b"
+LLM_MODEL = "qwen2.5:3b"
 
 # --- RAG retrieval -------------------------------------------------------
-SIMILARITY_THRESHOLD = 0.60
+# The threshold is intentionally LOW (high recall): irrelevant matches are
+# filtered later by the deterministic quote check in chat_function, not here.
+SIMILARITY_THRESHOLD = 0.35
 TOP_K = 3
 
 # --- LLM generation ------------------------------------------------------
