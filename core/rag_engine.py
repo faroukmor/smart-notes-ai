@@ -90,45 +90,65 @@ def retrieve_from_db(conn, user_input):
     return top_chunks
 
 
-def chat_function(msg):
+NOT_FOUND_REPLY = "The requested information was not found in your notes."
 
+
+def chat_function(msg):
+    """Answer strictly from the user's notes.
+
+    Anti-hallucination by construction: instead of letting the model
+    generate an answer (small models paraphrase/invent), we ask it only
+    to CLASSIFY which note answers the question. The returned text is
+    then the stored note itself, so nothing can be invented.
+    """
     conn = sqlite3.connect(DB_PATH)
     try:
         top_chunks = retrieve_from_db(conn, msg)
-        if not top_chunks:
-            return "The requested information was not found in your notes."
-
-        context = "\n\n".join([chunk[1] for chunk in top_chunks])
     finally:
         conn.close()
 
-    system_prompt = f"""You are a retrieval-only assistant. Answer the user question
-using ONLY the notes below. If the answer is not in the notes,
-reply with exactly: I don't know.
+    if not top_chunks:
+        return NOT_FOUND_REPLY
+
+    notes_section = ""
+    for i, (_score, text) in enumerate(top_chunks, start=1):
+        notes_section += f"[{i}] {text}\n\n"
+
+    system_prompt = f"""You are a strict classifier. The user asks a question
+and you have numbered notes below.
+
+Task: reply with ONLY the number (e.g. 1, 2 or 3) of the single note that
+actually contains the answer to the question.
 
 Rules:
-- Do not use any outside knowledge.
-- Do not repeat any word or phrase more than twice.
-- Keep the answer short (max 3 sentences).
-- Stop immediately after the answer.
+- Reply with the number only, nothing else.
+- If NO note contains the answer, reply with exactly: NONE
+- Never guess. If unsure, reply NONE.
 
 ======================
-{context}
-======================"""
+{notes_section}======================"""
 
     messages = [
-    {"role":"system","content":system_prompt},
-    {"role":"user","content":msg}
-]
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": msg},
+    ]
 
     response = _ollama_client.chat(
-    model=LLM_MODEL,
-    messages=messages,
-    options={
-        "temperature": TEMPERATURE,
-        "num_predict": NUM_PREDICT,
-        "repeat_penalty": REPEAT_PENALTY,
-    },
-)
+        model=LLM_MODEL,
+        messages=messages,
+        options={
+            "temperature": TEMPERATURE,
+            "num_predict": 16,
+        },
+    )
 
-    return response["message"]["content"].strip()
+    reply = response["message"]["content"].strip()
+
+    # Parse the classifier's choice deterministically.
+    digits = "".join(ch for ch in reply if ch.isdigit())
+    if digits:
+        index = int(digits) - 1
+        if 0 <= index < len(top_chunks):
+            return top_chunks[index][1]
+
+    return NOT_FOUND_REPLY
