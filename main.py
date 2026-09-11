@@ -37,15 +37,17 @@ class Main_Window(QMainWindow):
         self.content_editor.setPlaceholderText("Write your note content here...")
         
         self.search_button = QPushButton("Search Note")
-        self.ai_button = QPushButton("ask")
+        self.ai_button = QPushButton("Ask AI")
         
         self.search_input = QLineEdit()
         self.search_input.setObjectName("search_input")
-        self.search_input.setPlaceholderText("Search note by title or tags...")
+        self.search_input.setPlaceholderText("Search note by title or tags... (or press Enter)")
+        self.search_input.returnPressed.connect(self.search_note)
         
         self.ai_input = QLineEdit()
         self.ai_input.setObjectName("ai_input")
-        self.ai_input.setPlaceholderText("ask AI about your notes")
+        self.ai_input.setPlaceholderText("ask AI about your notes (or press Enter)")
+        self.ai_input.returnPressed.connect(self.ai_note)
 
         self.output_textEdit = QTextEdit()
         self.output_textEdit.setText("Welcome to Smart Notes Manager! Start by adding a note.")
