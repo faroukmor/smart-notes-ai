@@ -232,8 +232,3 @@ class smart_note(QObject):
 
     def close_connection(self):
         self.note_db.close_connection()
-
-    def closeEvent(self, event):
-        self.note_db.save_changes()
-        self.note_db.close_connection()
-        event.accept()
