@@ -78,8 +78,6 @@ def get_top_chunks(user_input, knowledge_base):
     return results[:TOP_K]
 
 
-
-
 def retrieve_from_db(conn, user_input):
     cur = conn.cursor()
     cur.execute("SELECT content,embedding FROM notes")
