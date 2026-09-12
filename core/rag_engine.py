@@ -71,7 +71,8 @@ def get_top_chunks(user_input, knowledge_base):
         similarity = cosine_similarity(query_embed, embedding)
 
         if similarity > SIMILARITY_THRESHOLD:
-            results.append((similarity, text))
+            # [0]=score, [1]=text, [2]=embedding (needed for answer verification)
+            results.append((similarity, text, embedding))
 
     results = sorted(results, reverse=True)
 
@@ -134,4 +135,14 @@ Rules:
         },
     )
 
-    return response["message"]["content"].strip()
+    ai_respond = response["message"]["content"].strip()
+    if "not found" in ai_respond.lower():
+        return NOT_FOUND_REPLY
+    ai_respond_embed = get_embedding(ai_respond)
+    if ai_respond_embed is None:
+        return NOT_FOUND_REPLY
+    for chunk in top_chunks:
+        similarity = cosine_similarity(ai_respond_embed, chunk[2])
+        if similarity > SIMILARITY_THRESHOLD:
+            return ai_respond
+    return NOT_FOUND_REPLY
